@@ -64,7 +64,6 @@ async fn response_examples(
     }
 }
 
-/// HTTP status code 404
 fn not_found() -> Response<BoxBody<Bytes, std::io::Error>> {
     Response::builder()
         .status(StatusCode::NOT_FOUND)
@@ -73,7 +72,6 @@ fn not_found() -> Response<BoxBody<Bytes, std::io::Error>> {
 }
 
 async fn simple_file_send(filename: &str) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
-    // Декодируем имя файла из URL
     let decoded_filename = match percent_decode_str(filename).decode_utf8() {
         Ok(decoded) => decoded.to_string(),
         Err(_) => return Ok(not_found()),
@@ -153,7 +151,6 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         }
     };
 
-    // Создаем HTML-страницу со списком файлов и добавляем JavaScript
     let mut html = String::from(
         r#"
         <html>
@@ -166,7 +163,7 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
          <link href="https://fonts.googleapis.com/css2?family=Cousine:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
             <style>
     body {
-        background-color: #282828;
+        background-color: #1d2021;
         font-family: 'Space Mono', sans-serif;
         font-size: 16px;
         color: #d4be98;
@@ -178,13 +175,13 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         padding-top: 0px;
         display: flex;
         height: 100vh;
-        overflow-x: hidden;  /* Отключаем горизонтальный скролл */
+        overflow-x: hidden;  
     }
     #file-list {
         width: 25%;
         max-width: 300px;
-        overflow-y: auto;  /* Включаем вертикальную прокрутку */
-        overflow-x: hidden;  /* Отключаем горизонтальную прокрутку */
+        overflow-y: auto;  
+        overflow-x: hidden;  
         padding-right: 20px;
         border-right: 2px solid #3c3836;
         position: relative;
@@ -198,7 +195,7 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         margin-bottom: 0px;
     }
     #file-list a {
-        color: #8ec07c;
+        color: #83a598;
         text-decoration: none;
         font-weight: bold;
         display: block;
@@ -270,7 +267,7 @@ img {
         box-shadow: 0 0 5px #3c3836;
     }
 #drop-area {
-    border: 2px dashed #8ec07c;
+    border: 2px dashed #d3869b;
     padding: 8px;
     border-radius: 10px;
     background-color: #1d2021;
@@ -287,27 +284,26 @@ img {
 
 
 #drop-area.highlight {
-    background-color: #3c3836;
+    background-color: #282828;
 }
-    /* Стили для полосы прокрутки */
+ 
 ::-webkit-scrollbar {
-    width: 8px;          /* Толщина вертикальной полосы прокрутки */
-    height: 8px;         /* Высота горизонтальной полосы прокрутки */
+    width: 8px;         
+    height: 8px;        
 }
 
-/* Стили для трека полосы прокрутки (фон) */
+
 ::-webkit-scrollbar-track {
-    background: #282828;  /* Цвет фона трека */
-}
+    background: #282828;  
 
-/* Стили для ползунка полосы прокрутки */
+
 ::-webkit-scrollbar-thumb {
-    background: #ebdbb2;      /* Цвет ползунка */
+    background: #ebdbb2;    
 }
 
-/* Стили для ползунка при наведении */
+
 ::-webkit-scrollbar-thumb:hover {
-    background: #ebdbb2;      /* Цвет ползунка при наведении */
+    background: #ebdbb2;      
 }
 
 
@@ -345,14 +341,13 @@ img {
     <p>Drag & Drop</p>
 </div>
             <script>
-                // Функция загрузки содержимого файла
 async function loadFileContent(fileName, event) {
     event.preventDefault();
     const previewDiv = document.getElementById('preview');
     
     previewDiv.innerHTML = 'Loading...';
 
-    // Кодируем имя файла перед использованием в URL
+
     const encodedFileName = encodeURIComponent(fileName);
 
     try {
@@ -370,11 +365,10 @@ async function loadFileContent(fileName, event) {
             } else {
     const text = await response.text();
 
-    // Определяем язык на основе расширения файла
+
     let fileExt = fileName.split('.').pop().toLowerCase();
     let languageClass = '';
 
-    // Сопоставляем расширение файла с языком
     switch (fileExt) {
         case 'rs':
             languageClass = 'rust';
@@ -417,14 +411,13 @@ async function loadFileContent(fileName, event) {
             languageClass = 'cpp';
             break;
         default:
-            // Если расширение не поддерживается, используем auto
             languageClass = 'plaintext';
     }
 
-    // Вставляем содержимое в блок с соответствующим классом для Highlight.js
+
     previewDiv.innerHTML = `<pre><code class="language-${languageClass}">${text}</code></pre>`;
 
-    // Применяем подсветку
+
     hljs.highlightAll();
 }
         } else {
@@ -436,7 +429,7 @@ async function loadFileContent(fileName, event) {
 }
 
 
-                // Функция поиска и фильтрации файлов
+             
                 function filterFiles() {
                     const searchInput = document.getElementById('search').value.toLowerCase();
                     const fileItems = document.querySelectorAll('#file-items li');
@@ -468,22 +461,20 @@ dropArea.addEventListener('drop', (event) => {
     handleFiles(files);
 });
 
-// Обработчик для загрузки файлов
 async function handleFiles(files) {
     for (const file of files) {
         try {
-            // Читаем содержимое файла как бинарные данные
+      
             const fileArrayBuffer = await file.arrayBuffer();
             const fileBytes = new Uint8Array(fileArrayBuffer);
 
-            // Отправляем данные файла в теле запроса
             const response = await fetch(`/upload?filename=${encodeURIComponent(file.name)}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/octet-stream', // указываем тип как бинарный
-                    'Content-Length': file.size.toString(),    // размер файла
+                    'Content-Type': 'application/octet-stream', 
+                    'Content-Length': file.size.toString(),    
                 },
-                body: fileBytes,  // передаем только данные файла
+                body: fileBytes,  
             });
 
             if (response.ok) {
@@ -497,16 +488,15 @@ async function handleFiles(files) {
         }
     }
 }
-// Функция для обновления списка файлов на странице
+
 async function updateFileList() {
     try {
         const response = await fetch('/');
         if (response.ok) {
             const html = await response.text();
             const fileListContainer = document.getElementById('file-items');
-            fileListContainer.innerHTML = '';  // Очистить текущий список
+            fileListContainer.innerHTML = '';  
 
-            // Добавляем новые элементы в список
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html;
             const newFileListItems = tempDiv.querySelectorAll('#file-items li');
