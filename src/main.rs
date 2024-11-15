@@ -59,6 +59,26 @@ async fn response_examples(
             // println!("{body_bytes:?}");
             simple_flie_load(&filename, &body_bytes).await
         }
+        (&Method::DELETE, _) => {
+            let query = req.uri().query().unwrap_or("").to_string();
+            let filename = query
+                .split("=")
+                .nth(1)
+                .map(|x| percent_decode_str(x).decode_utf8().ok())
+                .flatten()
+                .unwrap_or_else(|| "uploaded file".into());
+            let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
+            // println!("{body_bytes:?}");
+            tokio::fs::remove_file(format!("C:/Users/Ada/.shared/{filename}")).await;
+            Ok(Response::builder()
+                .status(StatusCode::OK)
+                .body(
+                    Full::new(Bytes::from("File uploaded successfully"))
+                        .map_err(|e| match e {})
+                        .boxed(),
+                )
+                .unwrap())
+        }
         _ => Ok(not_found()),
     }
 }
@@ -154,8 +174,8 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         r#"
         <html>
         <head>
-        <meta charset="UTF-8">
-
+        <meta charset="Unicode">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/0.3.0/mammoth.browser.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
         <link rel="stylesheet" href="https://unpkg.com/highlightjs@9.16.2/styles/gruvbox-dark.css">
@@ -276,7 +296,7 @@ img {
     margin-top: 10px;
     position: fixed;
     left: 88%;
-    bottom: 20px; /* регулировка отступа снизу */
+    bottom: 20px;
     width: 10%;
     z-index: 10;
 }
@@ -326,8 +346,13 @@ img {
         };
 
         html.push_str(&format!(
-            "<li><a href=\"#\" onclick=\"loadFileContent('{}', event)\">{}</a></li>",
-            file_name, file_name
+            "<li style=\"display: flex; align-items: center;\">
+                <a href=\"#\" onclick=\"loadFileContent('{}', event)\">{}</a>
+                <button onclick=\"deleteFile('{}', event)\" style=\"background: none; border: none; color: red; cursor: pointer; margin-left: 10px; font-size: 16px; padding: 0;\">
+                    🗑️
+                </button>
+            </li>",
+            file_name, file_name, file_name
         ));
     }
 
@@ -357,11 +382,28 @@ async function loadFileContent(fileName, event) {
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
                 previewDiv.innerHTML = `<img src="${url}" alt="${fileName}">`;
-            } else if (contentType.startsWith('video/')) {
+            } else if (fileName.endsWith('.docx')) {
+              
+                const arrayBuffer = await response.arrayBuffer();
+                mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
+                    .then(function(result) {
+                        previewDiv.innerHTML = result.value;
+                    })
+                    .catch(function(err) {
+                        previewDiv.innerHTML = 'Error converting .docx file.';
+                        console.error('Mammoth.js error:', err);
+                    });
+            }else if (contentType.startsWith('video/')) {
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
                 previewDiv.innerHTML = `<video controls><source src="${url}" type="${contentType}">Your browser does not support the video tag.</video>`;
-            } else {
+            } else if (fileName.endsWith('.pdf')) {
+         
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    previewDiv.innerHTML = `<embed src="${url}" type="application/pdf" width="100%" height="800px">`;
+                    
+    }else {
     const text = await response.text();
 
 
@@ -510,6 +552,42 @@ async function updateFileList() {
         console.error('Error fetching file list:', error);
     }
 }
+    async function deleteFile(fileName, event) {
+
+    event.preventDefault();
+
+    const confirmation = confirm(`are you sure that you want to delete this file: ${fileName}?`);
+    if (!confirmation) {
+        return; 
+    }
+
+    
+    const fileItem = event.target.closest('li'); 
+    try {
+       
+        const response = await fetch(`/delete?filename=${encodeURIComponent(fileName)}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+          
+            fileItem.remove();
+
+           
+         
+
+            alert(`file ${fileName} deleted.`);
+        } else {
+          
+            alert('error while deleting.');
+        }
+    } catch (error) {
+      
+        console.error('error while deleeting:', error);
+        alert('error while deleting file unwak');
+    }
+}
+
 
             </script>
         </body>
