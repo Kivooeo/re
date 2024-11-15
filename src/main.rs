@@ -1,7 +1,3 @@
-#![deny(warnings)]
-
-use std::net::SocketAddr;
-
 use bytes::Bytes;
 use futures_util::TryStreamExt;
 use http_body_util::{combinators::BoxBody, BodyExt, Full, StreamBody};
@@ -10,16 +6,22 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, Result, StatusCode};
 use hyper_util::rt::TokioIo;
+use mime_guess::from_path;
+use percent_encoding::percent_decode_str;
+use std::fs::OpenOptions;
+use std::net::SocketAddr;
+use std::str;
+use tokio::fs::read_dir;
+use tokio::io::AsyncWriteExt;
 use tokio::{fs::File, net::TcpListener};
 use tokio_util::io::ReaderStream;
-
 static NOTFOUND: &[u8] = b"Not Found";
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
 
-    let addr: SocketAddr = "0.0.0.0:1337".parse().unwrap();
+    let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
     println!("{:?}", std::env::current_dir());
@@ -42,9 +44,22 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 async fn response_examples(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    dbg!(req.method(), req.uri().path());
     match (req.method(), req.uri().path()) {
-        (&Method::GET, a) => simple_file_send(&a[1..]).await,
-
+        (&Method::GET, "/") => list_files().await,
+        (&Method::GET, a) => simple_file_send(a).await,
+        (&Method::POST, "/upload") => {
+            let query = req.uri().query().unwrap_or("").to_string();
+            let filename = query
+                .split("=")
+                .nth(1)
+                .map(|x| percent_decode_str(x).decode_utf8().ok())
+                .flatten()
+                .unwrap_or_else(|| "uploaded file".into());
+            let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
+            // println!("{body_bytes:?}");
+            simple_flie_load(&filename, &body_bytes).await
+        }
         _ => Ok(not_found()),
     }
 }
@@ -58,29 +73,465 @@ fn not_found() -> Response<BoxBody<Bytes, std::io::Error>> {
 }
 
 async fn simple_file_send(filename: &str) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
-    // Open file for reading
-    let file = File::open(format!("C:/Users/Ada/.shared/{}", filename)).await;
-    println!("{:?}", filename);
-    if file.is_err() {
-        eprintln!("ERROR: Unable to open file.");
+    // Декодируем имя файла из URL
+    let decoded_filename = match percent_decode_str(filename).decode_utf8() {
+        Ok(decoded) => decoded.to_string(),
+        Err(_) => return Ok(not_found()),
+    };
 
+    let file_path = format!("C:/Users/Ada/.shared/{}", decoded_filename);
+    let file = File::open(&file_path).await;
+
+    if file.is_err() {
+        eprintln!("ERROR: Unable to open file: {}", file_path);
         return Ok(not_found());
     }
 
-    let file: File = file.unwrap();
-
-    // Wrap to a tokio_util::io::ReaderStream
+    let file = file.unwrap();
     let reader_stream = ReaderStream::new(file);
 
-    // Convert to http_body_util::BoxBody
+    let mime_type = from_path(&file_path).first_or_octet_stream();
+    let content_type = mime_type.to_string();
+
     let stream_body = StreamBody::new(reader_stream.map_ok(Frame::data));
     let boxed_body = stream_body.boxed();
 
-    // Send response
     let response = Response::builder()
         .status(StatusCode::OK)
+        .header("Content-Type", content_type)
         .body(boxed_body)
         .unwrap();
 
     Ok(response)
+}
+
+async fn simple_flie_load(
+    filename: &str,
+    filecontent: &[u8],
+) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    let decoded_filename = match percent_decode_str(filename).decode_utf8() {
+        Ok(decoded) => decoded.to_string(),
+        Err(_) => return Ok(not_found()),
+    };
+    let file_path = format!("C:/Users/Ada/.shared/{}", decoded_filename);
+    let file = tokio::fs::File::create_new(file_path).await;
+
+    if file.is_err() {
+        eprintln!("Unable to create file {}", filename);
+        return Ok(not_found());
+    }
+
+    let mut file = file.unwrap();
+    match file.write_all(filecontent).await {
+        Ok(_) => println!("succeffulyy"),
+        Err(e) => println!("error while writing {e:?}"),
+    };
+    dbg!(&file);
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .body(
+            Full::new(Bytes::from("File uploaded successfully"))
+                .map_err(|e| match e {})
+                .boxed(),
+        )
+        .unwrap())
+}
+
+async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    let base_dir = std::path::Path::new("C:/Users/Ada/.shared");
+    let mut entries = match read_dir(base_dir).await {
+        Ok(entries) => entries,
+        Err(_) => {
+            return Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(
+                    Full::new(Bytes::from_static(b"Directory not found"))
+                        .map_err(|e| match e {})
+                        .boxed(),
+                )
+                .unwrap())
+        }
+    };
+
+    // Создаем HTML-страницу со списком файлов и добавляем JavaScript
+    let mut html = String::from(
+        r#"
+        <html>
+        <head>
+        <meta charset="UTF-8">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/highlightjs@9.16.2/styles/gruvbox-dark.css">
+         <link href="https://fonts.googleapis.com/css2?family=Cousine:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+            <style>
+    body {
+        background-color: #282828;
+        font-family: 'Space Mono', sans-serif;
+        font-size: 16px;
+        color: #d4be98;
+        line-height: 1.6;
+        margin: 0;
+        padding-bottom: 0px;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 0px;
+        display: flex;
+        height: 100vh;
+        overflow-x: hidden;  /* Отключаем горизонтальный скролл */
+    }
+    #file-list {
+        width: 25%;
+        max-width: 300px;
+        overflow-y: auto;  /* Включаем вертикальную прокрутку */
+        overflow-x: hidden;  /* Отключаем горизонтальную прокрутку */
+        padding-right: 20px;
+        border-right: 2px solid #3c3836;
+        position: relative;
+    }
+    #file-list ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+    #file-list li {
+        margin-bottom: 0px;
+    }
+    #file-list a {
+        color: #8ec07c;
+        text-decoration: none;
+        font-weight: bold;
+        display: block;
+        padding: 3px;
+        transition: background-color 0.3s;
+
+        overflow: hidden;
+
+    }
+    #file-list a:hover {
+        background-color: #3c3836;
+    }
+    #preview {
+        flex-grow: 1;
+        padding-left: 20px;
+        padding-top: 20px;
+        overflow-y: auto;
+    }
+img {
+    max-width: 95%;
+    max-height: 80%;
+    display: block;
+    margin: auto;
+    padding-top: 20px;
+}
+    vid {
+    max-width: 95%;
+    max-height: 80%;
+    display: block;
+    margin: auto;
+    padding-top: 20px;
+}
+    video {
+    max-width: 95%;
+    max-height: 80%;
+    display: block;
+    margin: auto;
+    padding-top: 20px;
+}
+
+
+    pre {
+        background-color: #1d2021;
+        color: #ebdbb2;
+        padding: 10px;
+        border: 1px solid #504945;
+        border-radius: 4px;
+        white-space: pre-wrap;
+    }
+    #search {
+        font-family: 'Space Mono', sans-serif;
+        font-size: 16px;
+        color: #d4be98;
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        margin-top: 10px;
+        border: 1px solid #504945;
+        border-radius: 4px;
+        background-color: #1d2021;
+        color: #d4be98;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    #search:focus {
+        outline: none;
+        border-color: #3c3836;
+        box-shadow: 0 0 5px #3c3836;
+    }
+#drop-area {
+    border: 2px dashed #8ec07c;
+    padding: 8px;
+    border-radius: 10px;
+    background-color: #1d2021;
+    color: #d4be98;
+    text-align: center;
+    margin-bottom: 0;
+    margin-top: 10px;
+    position: fixed;
+    left: 88%;
+    bottom: 20px; /* регулировка отступа снизу */
+    width: 10%;
+    z-index: 10;
+}
+
+
+#drop-area.highlight {
+    background-color: #3c3836;
+}
+    /* Стили для полосы прокрутки */
+::-webkit-scrollbar {
+    width: 8px;          /* Толщина вертикальной полосы прокрутки */
+    height: 8px;         /* Высота горизонтальной полосы прокрутки */
+}
+
+/* Стили для трека полосы прокрутки (фон) */
+::-webkit-scrollbar-track {
+    background: #282828;  /* Цвет фона трека */
+}
+
+/* Стили для ползунка полосы прокрутки */
+::-webkit-scrollbar-thumb {
+    background: #ebdbb2;      /* Цвет ползунка */
+}
+
+/* Стили для ползунка при наведении */
+::-webkit-scrollbar-thumb:hover {
+    background: #ebdbb2;      /* Цвет ползунка при наведении */
+}
+
+
+</style>
+
+        </head>
+        <body>
+            <div id="file-list">
+                            
+                <input type="text" id="search" placeholder="Search files..." onkeyup="filterFiles()">
+
+                <ul id="file-items">
+    "#,
+    );
+
+    while let Some(entry) = entries.next_entry().await.unwrap_or(None) {
+        let path = entry.path();
+        let file_name = match path.file_name() {
+            Some(name) => name.to_string_lossy(),
+            None => continue,
+        };
+
+        html.push_str(&format!(
+            "<li><a href=\"#\" onclick=\"loadFileContent('{}', event)\">{}</a></li>",
+            file_name, file_name
+        ));
+    }
+
+    html.push_str(
+        r#"
+                </ul>
+            </div>
+            <div id="preview">Select a file to preview</div> 
+            <div id="drop-area">
+    <p>Drag & Drop</p>
+</div>
+            <script>
+                // Функция загрузки содержимого файла
+async function loadFileContent(fileName, event) {
+    event.preventDefault();
+    const previewDiv = document.getElementById('preview');
+    
+    previewDiv.innerHTML = 'Loading...';
+
+    // Кодируем имя файла перед использованием в URL
+    const encodedFileName = encodeURIComponent(fileName);
+
+    try {
+        const response = await fetch(`/${encodedFileName}`);
+        if (response.ok) {
+            const contentType = response.headers.get('Content-Type');
+            if (contentType.startsWith('image/')) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                previewDiv.innerHTML = `<img src="${url}" alt="${fileName}">`;
+            } else if (contentType.startsWith('video/')) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                previewDiv.innerHTML = `<video controls><source src="${url}" type="${contentType}">Your browser does not support the video tag.</video>`;
+            } else {
+    const text = await response.text();
+
+    // Определяем язык на основе расширения файла
+    let fileExt = fileName.split('.').pop().toLowerCase();
+    let languageClass = '';
+
+    // Сопоставляем расширение файла с языком
+    switch (fileExt) {
+        case 'rs':
+            languageClass = 'rust';
+            break;
+        case 'py':
+            languageClass = 'python';
+            break;
+        case 'js':
+            languageClass = 'javascript';
+            break;
+        case 'html':
+            languageClass = 'html';
+            break;
+        case 'css':
+            languageClass = 'css';
+            break;
+        case 'json':
+            languageClass = 'json';
+            break;
+        case 'toml':
+            languageClass = 'toml';
+            break;
+        case 'yaml':
+        case 'yml':
+            languageClass = 'yaml';
+            break;
+        case 'md':
+            languageClass = 'markdown';
+            break;
+        case 'sh':
+            languageClass = 'bash';
+            break;
+        case 'c':
+        case 'h':
+            languageClass = 'c';
+            break;
+        case 'cpp':
+        case 'cc':
+        case 'cxx':
+            languageClass = 'cpp';
+            break;
+        default:
+            // Если расширение не поддерживается, используем auto
+            languageClass = 'plaintext';
+    }
+
+    // Вставляем содержимое в блок с соответствующим классом для Highlight.js
+    previewDiv.innerHTML = `<pre><code class="language-${languageClass}">${text}</code></pre>`;
+
+    // Применяем подсветку
+    hljs.highlightAll();
+}
+        } else {
+            previewDiv.innerHTML = 'Error loading file';
+        }
+    } catch (error) {
+        previewDiv.innerHTML = 'Error loading file';
+    }
+}
+
+
+                // Функция поиска и фильтрации файлов
+                function filterFiles() {
+                    const searchInput = document.getElementById('search').value.toLowerCase();
+                    const fileItems = document.querySelectorAll('#file-items li');
+
+                    fileItems.forEach(item => {
+                        const fileName = item.textContent.toLowerCase();
+                        if (fileName.includes(searchInput)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                }
+                const dropArea = document.getElementById('drop-area');
+
+dropArea.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    dropArea.classList.add('highlight');
+});
+
+dropArea.addEventListener('dragleave', () => {
+    dropArea.classList.remove('highlight');
+});
+
+dropArea.addEventListener('drop', (event) => {
+    event.preventDefault();
+    dropArea.classList.remove('highlight');
+    const files = event.dataTransfer.files;
+    handleFiles(files);
+});
+
+// Обработчик для загрузки файлов
+async function handleFiles(files) {
+    for (const file of files) {
+        try {
+            // Читаем содержимое файла как бинарные данные
+            const fileArrayBuffer = await file.arrayBuffer();
+            const fileBytes = new Uint8Array(fileArrayBuffer);
+
+            // Отправляем данные файла в теле запроса
+            const response = await fetch(`/upload?filename=${encodeURIComponent(file.name)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/octet-stream', // указываем тип как бинарный
+                    'Content-Length': file.size.toString(),    // размер файла
+                },
+                body: fileBytes,  // передаем только данные файла
+            });
+
+            if (response.ok) {
+                updateFileList();
+            } else {
+
+            }
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            alert('Error uploading file');
+        }
+    }
+}
+// Функция для обновления списка файлов на странице
+async function updateFileList() {
+    try {
+        const response = await fetch('/');
+        if (response.ok) {
+            const html = await response.text();
+            const fileListContainer = document.getElementById('file-items');
+            fileListContainer.innerHTML = '';  // Очистить текущий список
+
+            // Добавляем новые элементы в список
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            const newFileListItems = tempDiv.querySelectorAll('#file-items li');
+
+            newFileListItems.forEach(item => {
+                fileListContainer.appendChild(item);
+            });
+        } else {
+            console.error('Failed to fetch file list');
+        }
+    } catch (error) {
+        console.error('Error fetching file list:', error);
+    }
+}
+
+            </script>
+        </body>
+        </html>
+    "#,
+    );
+
+    let response_body = Full::new(Bytes::from(html)).map_err(|e| match e {}).boxed();
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/html")
+        .body(response_body)
+        .unwrap())
 }
