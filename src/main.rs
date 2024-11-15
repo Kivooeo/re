@@ -8,7 +8,6 @@ use hyper::{Method, Request, Response, Result, StatusCode};
 use hyper_util::rt::TokioIo;
 use mime_guess::from_path;
 use percent_encoding::percent_decode_str;
-use std::fs::OpenOptions;
 use std::net::SocketAddr;
 use std::str;
 use tokio::fs::read_dir;
