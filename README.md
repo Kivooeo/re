@@ -25,4 +25,4 @@ because for me is user name is Tea\
 and OS is windiows\
 so i have path like this\
 `C:/Users/Tea/.shared`\
-and you have to change it to your own inlucding folder (you have to create it before)\
+and you have to change it to your own inlucding folder (you have to create it before)
