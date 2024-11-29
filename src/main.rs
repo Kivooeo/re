@@ -16,6 +16,7 @@ use tokio::{fs::File, net::TcpListener};
 use tokio_util::io::ReaderStream;
 static NOTFOUND: &[u8] = b"Not Found";
 
+
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
@@ -69,7 +70,7 @@ async fn response_examples(
                 .unwrap_or_else(|| "uploaded file".into());
             let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
             // println!("{body_bytes:?}");
-            tokio::fs::remove_file(format!("C:/Users/Ada/.shared/{filename}")).await;
+            tokio::fs::remove_file(format!("C:/Users/Tea/.shared/{filename}")).await;
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .body(
@@ -96,7 +97,7 @@ async fn simple_file_send(filename: &str) -> Result<Response<BoxBody<Bytes, std:
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("C:/Users/Ada/.shared/{}", decoded_filename);
+    let file_path = format!("C:/Users/Tea/.shared/{}", decoded_filename);
     let file = File::open(&file_path).await;
 
     if file.is_err() {
@@ -130,7 +131,7 @@ async fn simple_flie_load(
         Ok(decoded) => decoded.to_string(),
         Err(_) => return Ok(not_found()),
     };
-    let file_path = format!("C:/Users/Ada/.shared/{}", decoded_filename);
+    let file_path = format!("C:/Users/Tea/.shared/{}", decoded_filename);
     let file = tokio::fs::File::create_new(file_path).await;
 
     if file.is_err() {
@@ -155,10 +156,12 @@ async fn simple_flie_load(
 }
 
 async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
-    let base_dir = std::path::Path::new("C:/Users/Ada/.shared");
-    let mut entries = match read_dir(base_dir).await {
+    let base_dir = std::path::Path::new("C:/Users/Tea/.shared");
+    dbg!(&base_dir)
+;    let mut entries = match read_dir(base_dir).await {
         Ok(entries) => entries,
-        Err(_) => {
+        Err(e) => {
+            dbg!(&e);
             return Ok(Response::builder()
                 .status(StatusCode::NOT_FOUND)
                 .body(
