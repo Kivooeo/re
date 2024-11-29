@@ -1,5 +1,5 @@
 # re
-rusted http file server\
+rusted http file server
 
 # how to use this thing for your own\
 
@@ -11,7 +11,7 @@ so we have to run this two commands to install and run bore\
 `cargo install bore-cli`\
 and then run\
 `bore local 8000 --to bore.pub --port 8000`\
-\
+
 
 after this clone my giga project that in about 8 hours\
 `git clone https://github.com/Kivooeo/re`\
