@@ -3,7 +3,7 @@ rusted http file server
 
 # how to use this thing for your own
 
-first of all we need say thanks this cool tcp tunned written in rust https://github.com/ekzhang/bore\
+first of all we need say thanks this cool tcp tunned written in rust https://github.com/ekzhang/bore \
 after this we have to install this cool thing on your pc \
 (i hope you've installed rust itself already if not please visit rustup.rs)\
 so we have to run this two commands to install and run bore
