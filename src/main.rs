@@ -1,5 +1,7 @@
 use bytes::Bytes;
 use futures_util::TryStreamExt;
+use http::header::EXPIRES;
+use http::response;
 use http_body_util::{combinators::BoxBody, BodyExt, Full, StreamBody};
 use hyper::body::Frame;
 use hyper::server::conn::http1;
@@ -15,7 +17,6 @@ use tokio::io::AsyncWriteExt;
 use tokio::{fs::File, net::TcpListener};
 use tokio_util::io::ReaderStream;
 static NOTFOUND: &[u8] = b"Not Found";
-
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -60,6 +61,20 @@ async fn response_examples(
             // println!("{body_bytes:?}");
             simple_flie_load(&filename, &body_bytes).await
         }
+        (&Method::POST, "/edit") => {
+            let query = req.uri().query().unwrap_or("").to_string();
+            let filename = query
+                .split("=")
+                .nth(1)
+                .map(|x| percent_decode_str(x).decode_utf8().ok())
+                .flatten()
+                .unwrap_or_else(|| "edited_file.txt".into());
+
+            let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
+
+            save_edited_file(&filename, &body_bytes).await
+        }
+
         (&Method::DELETE, _) => {
             let query = req.uri().query().unwrap_or("").to_string();
             let filename = query
@@ -123,6 +138,29 @@ async fn simple_file_send(filename: &str) -> Result<Response<BoxBody<Bytes, std:
     Ok(response)
 }
 
+async fn save_edited_file(
+    filename: &str,
+    filecontent: &[u8],
+) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    let decoded_filename = match percent_decode_str(filename).decode_utf8() {
+        Ok(decoded) => decoded.to_string(),
+        Err(_) => return Ok(not_found()),
+    };
+
+    let file_path = format!("C:/Users/Tea/.shared/{}", decoded_filename);
+
+    // Create or overwrite the file with the new content
+    let mut file = tokio::fs::File::create(file_path).await.unwrap();
+    file.write_all(filecontent).await.unwrap();
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .body(
+            Full::new(Bytes::from("File uploaded successfully"))
+                .map_err(|e| match e {})
+                .boxed(),
+        )
+        .unwrap())
+}
 async fn simple_flie_load(
     filename: &str,
     filecontent: &[u8],
@@ -157,8 +195,8 @@ async fn simple_flie_load(
 
 async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     let base_dir = std::path::Path::new("C:/Users/Tea/.shared");
-    dbg!(&base_dir)
-;    let mut entries = match read_dir(base_dir).await {
+    dbg!(&base_dir);
+    let mut entries = match read_dir(base_dir).await {
         Ok(entries) => entries,
         Err(e) => {
             dbg!(&e);
@@ -169,7 +207,7 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
                         .map_err(|e| match e {})
                         .boxed(),
                 )
-                .unwrap())
+                .unwrap());
         }
     };
 
@@ -302,7 +340,47 @@ img {
     bottom: 20px;
     width: 10%;
     z-index: 10;
+
+    
 }
+/* Gruvbox dark theme for file content editor */
+#file-content {
+    background-color: #282828;  /* Gruvbox dark background */
+    color: #d4be98;  /* Gruvbox light text */
+    border: 1px solid #504945;  /* Dark border for contrast */
+    padding: 10px;
+    width: 100%;
+    height: 300px;
+    font-family: 'Space Mono', sans-serif;  /* Optional font */
+    font-size: 16px;
+    resize: none;  /* Disable resizing */
+    border-radius: 4px;  /* Optional rounded corners */
+    outline: none;  /* Remove default outline */
+}
+
+/* Focused state */
+#file-content:focus {
+    border-color: #83a598;  /* Gruvbox accent color on focus */
+    box-shadow: 0 0 5px #83a598;  /* Gruvbox focus shadow */
+}
+
+/* Optional button styles */
+button {
+    background-color: transparent;
+    color: #83a598;  /* Gruvbox accent color */
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+/* Button hover effect */
+button:hover {
+    background-color: #3c3836;  /* Darker hover effect */
+    color: #d4be98;  /* Light text color on hover */
+}
+
 
 
 #drop-area.highlight {
@@ -327,6 +405,9 @@ img {
 ::-webkit-scrollbar-thumb:hover {
     background: #ebdbb2;      
 }
+/* Custom styling for the textarea to match the Gruvbox Dark theme */
+
+
 
 
 </style>
@@ -351,11 +432,14 @@ img {
         html.push_str(&format!(
             "<li style=\"display: flex; align-items: center;\">
                 <a href=\"#\" onclick=\"loadFileContent('{}', event)\">{}</a>
+                <button onclick=\"editFileContent('{}', event)\" style=\"background: none; border: none; color: blue; cursor: pointer; margin-left: 10px; font-size: 16px; padding: 0;\">
+                    ✏️
+                </button>
                 <button onclick=\"deleteFile('{}', event)\" style=\"background: none; border: none; color: red; cursor: pointer; margin-left: 10px; font-size: 16px; padding: 0;\">
                     🗑️
                 </button>
             </li>",
-            file_name, file_name, file_name
+            file_name, file_name, file_name, file_name
         ));
     }
 
@@ -588,6 +672,52 @@ async function updateFileList() {
       
         console.error('error while deleeting:', error);
         alert('error while deleting file unwak');
+    }
+}
+async function editFileContent(fileName, event) {
+    event.preventDefault();
+    const previewDiv = document.getElementById('preview');
+    
+    previewDiv.innerHTML = 'Editing...';
+
+    const encodedFileName = encodeURIComponent(fileName);
+
+    try {
+        const response = await fetch(`/${encodedFileName}`);
+        if (response.ok) {
+            const text = await response.text();
+            previewDiv.innerHTML = `
+                <textarea id="file-content">${text}</textarea>
+                <button onclick="saveEditedFile('${encodedFileName}')">Save</button>
+            `;
+        } else {
+            previewDiv.innerHTML = 'Error loading file for editing';
+        }
+    } catch (error) {
+        previewDiv.innerHTML = 'Error loading file for editing';
+    }
+}
+
+async function saveEditedFile(fileName) {
+    const editedContent = document.getElementById('file-content').value;  // Fixed ID here
+
+    try {
+        const response = await fetch(`/edit?filename=${encodeURIComponent(fileName)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain',
+            },
+            body: editedContent,
+        });
+
+        if (response.ok) {
+            alert('File saved successfully!');
+        } else {
+            alert('Error saving file.');
+        }
+    } catch (error) {
+        console.error('Error saving file:', error);
+        alert('Error saving file.');
     }
 }
 
