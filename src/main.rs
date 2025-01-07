@@ -1,7 +1,5 @@
 use bytes::Bytes;
 use futures_util::TryStreamExt;
-use http::header::EXPIRES;
-use http::response;
 use http_body_util::{combinators::BoxBody, BodyExt, Full, StreamBody};
 use hyper::body::Frame;
 use hyper::server::conn::http1;
@@ -54,9 +52,8 @@ async fn response_examples(
             let filename = query
                 .split("=")
                 .nth(1)
-                .map(|x| percent_decode_str(x).decode_utf8().ok())
-                .flatten()
-                .unwrap_or_else(|| "uploaded file".into());
+                .and_then(|x| percent_decode_str(x).decode_utf8().ok())
+                 .unwrap_or_else(|| "uploaded file".into());
             let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
             // println!("{body_bytes:?}");
             simple_flie_load(&filename, &body_bytes).await
@@ -66,8 +63,7 @@ async fn response_examples(
             let filename = query
                 .split("=")
                 .nth(1)
-                .map(|x| percent_decode_str(x).decode_utf8().ok())
-                .flatten()
+                .and_then(|x| percent_decode_str(x).decode_utf8().ok())
                 .unwrap_or_else(|| "edited_file.txt".into());
 
             let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
@@ -80,12 +76,10 @@ async fn response_examples(
             let filename = query
                 .split("=")
                 .nth(1)
-                .map(|x| percent_decode_str(x).decode_utf8().ok())
-                .flatten()
+                .and_then(|x| percent_decode_str(x).decode_utf8().ok())
                 .unwrap_or_else(|| "uploaded file".into());
-            let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
             // println!("{body_bytes:?}");
-            tokio::fs::remove_file(format!("C:/Users/Tea/.shared/{filename}")).await;
+            tokio::fs::remove_file(format!("C:/Users/Sun/.shared/{filename}")).await.unwrap();
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .body(
@@ -112,7 +106,7 @@ async fn simple_file_send(filename: &str) -> Result<Response<BoxBody<Bytes, std:
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("C:/Users/Tea/.shared/{}", decoded_filename);
+    let file_path = format!("C:/Users/Sun/.shared/{}", decoded_filename);
     let file = File::open(&file_path).await;
 
     if file.is_err() {
@@ -147,7 +141,7 @@ async fn save_edited_file(
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("C:/Users/Tea/.shared/{}", decoded_filename);
+    let file_path = format!("C:/Users/Sun/.shared/{}", decoded_filename);
 
     // Create or overwrite the file with the new content
     let mut file = tokio::fs::File::create(file_path).await.unwrap();
@@ -169,7 +163,7 @@ async fn simple_flie_load(
         Ok(decoded) => decoded.to_string(),
         Err(_) => return Ok(not_found()),
     };
-    let file_path = format!("C:/Users/Tea/.shared/{}", decoded_filename);
+    let file_path = format!("C:/Users/Sun/.shared/{}", decoded_filename);
     let file = tokio::fs::File::create_new(file_path).await;
 
     if file.is_err() {
@@ -194,7 +188,7 @@ async fn simple_flie_load(
 }
 
 async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
-    let base_dir = std::path::Path::new("C:/Users/Tea/.shared");
+    let base_dir = std::path::Path::new("C:/Users/Sun/.shared");
     dbg!(&base_dir);
     let mut entries = match read_dir(base_dir).await {
         Ok(entries) => entries,
