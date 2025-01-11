@@ -1,0 +1,5 @@
+
+[phases]
+setup = "rustup override set stable && rustup update"
+build = "cargo build --release"
+start = "./target/release/your_project_name"
