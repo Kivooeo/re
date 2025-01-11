@@ -14,12 +14,18 @@ use tokio::fs::read_dir;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs::File, net::TcpListener};
 use tokio_util::io::ReaderStream;
+use whoami;
 static NOTFOUND: &[u8] = b"Not Found";
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
-
+    match tokio::fs::create_dir_all(format!("/home/{}/.shared", whoami::username())).await {
+        Ok(_) => {}
+        Err(e) => {
+            dbg!(&e);
+        }
+    }
     let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
@@ -53,7 +59,7 @@ async fn response_examples(
                 .split("=")
                 .nth(1)
                 .and_then(|x| percent_decode_str(x).decode_utf8().ok())
-                 .unwrap_or_else(|| "uploaded file".into());
+                .unwrap_or_else(|| "uploaded file".into());
             let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
             // println!("{body_bytes:?}");
             simple_flie_load(&filename, &body_bytes).await
@@ -79,7 +85,9 @@ async fn response_examples(
                 .and_then(|x| percent_decode_str(x).decode_utf8().ok())
                 .unwrap_or_else(|| "uploaded file".into());
             // println!("{body_bytes:?}");
-            tokio::fs::remove_file(format!("C:/Users/Sun/.shared/{filename}")).await.unwrap();
+            tokio::fs::remove_file(format!("/home/{}/.shared/{filename}", whoami::username()))
+                .await
+                .unwrap();
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .body(
@@ -106,7 +114,7 @@ async fn simple_file_send(filename: &str) -> Result<Response<BoxBody<Bytes, std:
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("C:/Users/Sun/.shared/{}", decoded_filename);
+    let file_path = format!("/home/{}/.shared/{}", whoami::username(), decoded_filename);
     let file = File::open(&file_path).await;
 
     if file.is_err() {
@@ -141,7 +149,7 @@ async fn save_edited_file(
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("C:/Users/Sun/.shared/{}", decoded_filename);
+    let file_path = format!("/home/{}/.shared/{}", whoami::username(), decoded_filename);
 
     // Create or overwrite the file with the new content
     let mut file = tokio::fs::File::create(file_path).await.unwrap();
@@ -163,7 +171,7 @@ async fn simple_flie_load(
         Ok(decoded) => decoded.to_string(),
         Err(_) => return Ok(not_found()),
     };
-    let file_path = format!("C:/Users/Sun/.shared/{}", decoded_filename);
+    let file_path = format!("/home/{}/.shared/{}", whoami::username(), decoded_filename);
     let file = tokio::fs::File::create_new(file_path).await;
 
     if file.is_err() {
@@ -188,7 +196,8 @@ async fn simple_flie_load(
 }
 
 async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
-    let base_dir = std::path::Path::new("C:/Users/Sun/.shared");
+    let x = format!("/home/{}/.shared", whoami::username());
+    let base_dir = std::path::Path::new(&x);
     dbg!(&base_dir);
     let mut entries = match read_dir(base_dir).await {
         Ok(entries) => entries,
