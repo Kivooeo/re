@@ -1,0 +1,281 @@
+
+</ul>
+</div>
+<div id="preview">Select a file to preview</div> 
+<div id="drop-area">
+<p>Drag & Drop</p>
+</div>
+<script>
+async function loadFileContent(fileName, event) {
+event.preventDefault();
+const previewDiv = document.getElementById('preview');
+
+previewDiv.innerHTML = 'Loading...';
+
+
+const encodedFileName = encodeURIComponent(fileName);
+
+try {
+const response = await fetch(`/${encodedFileName}`);
+if (response.ok) {
+const contentType = response.headers.get('Content-Type');
+if (contentType.startsWith('image/')) {
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    previewDiv.innerHTML = `<img src="${url}" alt="${fileName}">`;
+} else if (fileName.endsWith('.docx')) {
+  
+    const arrayBuffer = await response.arrayBuffer();
+    mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
+        .then(function(result) {
+            previewDiv.innerHTML = result.value;
+        })
+        .catch(function(err) {
+            previewDiv.innerHTML = 'Error converting .docx file.';
+            console.error('Mammoth.js error:', err);
+        });
+}else if (contentType.startsWith('video/')) {
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    previewDiv.innerHTML = `<video controls><source src="${url}" type="${contentType}">Your browser does not support the video tag.</video>`;
+} else if (fileName.endsWith('.pdf')) {
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        previewDiv.innerHTML = `<embed src="${url}" type="application/pdf" width="100%" height="800px">`;
+        
+}else {
+const text = await response.text();
+
+
+let fileExt = fileName.split('.').pop().toLowerCase();
+let languageClass = '';
+
+switch (fileExt) {
+case 'rs':
+languageClass = 'rust';
+break;
+case 'py':
+languageClass = 'python';
+break;
+case 'js':
+languageClass = 'javascript';
+break;
+case 'html':
+languageClass = 'html';
+break;
+case 'css':
+languageClass = 'css';
+break;
+case 'json':
+languageClass = 'json';
+break;
+case 'toml':
+languageClass = 'toml';
+break;
+case 'yaml':
+case 'yml':
+languageClass = 'yaml';
+break;
+case 'md':
+languageClass = 'markdown';
+break;
+case 'sh':
+languageClass = 'bash';
+break;
+case 'c':
+case 'h':
+languageClass = 'c';
+break;
+case 'cpp':
+case 'cc':
+case 'cxx':
+languageClass = 'cpp';
+break;
+default:
+languageClass = 'plaintext';
+}
+
+
+previewDiv.innerHTML = `<pre><code class="language-${languageClass}">${text}</code></pre>`;
+
+
+hljs.highlightAll();
+}
+} else {
+previewDiv.innerHTML = 'Error loading file';
+}
+} catch (error) {
+previewDiv.innerHTML = 'Error loading file';
+}
+}
+
+
+ 
+    function filterFiles() {
+        const searchInput = document.getElementById('search').value.toLowerCase();
+        const fileItems = document.querySelectorAll('#file-items li');
+
+        fileItems.forEach(item => {
+            const fileName = item.textContent.toLowerCase();
+            if (fileName.includes(searchInput)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    const dropArea = document.getElementById('drop-area');
+
+dropArea.addEventListener('dragover', (event) => {
+event.preventDefault();
+dropArea.classList.add('highlight');
+});
+
+dropArea.addEventListener('dragleave', () => {
+dropArea.classList.remove('highlight');
+});
+
+dropArea.addEventListener('drop', (event) => {
+event.preventDefault();
+dropArea.classList.remove('highlight');
+const files = event.dataTransfer.files;
+handleFiles(files);
+});
+
+async function handleFiles(files) {
+for (const file of files) {
+try {
+
+const fileArrayBuffer = await file.arrayBuffer();
+const fileBytes = new Uint8Array(fileArrayBuffer);
+
+const response = await fetch(`/upload?filename=${encodeURIComponent(file.name)}`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/octet-stream', 
+        'Content-Length': file.size.toString(),    
+    },
+    body: fileBytes,  
+});
+
+if (response.ok) {
+    updateFileList();
+} else {
+
+}
+} catch (error) {
+console.error('Error uploading file:', error);
+alert('Error uploading file');
+}
+}
+}
+
+async function updateFileList() {
+try {
+const response = await fetch('/');
+if (response.ok) {
+const html = await response.text();
+const fileListContainer = document.getElementById('file-items');
+fileListContainer.innerHTML = '';  
+
+const tempDiv = document.createElement('div');
+tempDiv.innerHTML = html;
+const newFileListItems = tempDiv.querySelectorAll('#file-items li');
+
+newFileListItems.forEach(item => {
+    fileListContainer.appendChild(item);
+});
+} else {
+console.error('Failed to fetch file list');
+}
+} catch (error) {
+console.error('Error fetching file list:', error);
+}
+}
+async function deleteFile(fileName, event) {
+
+event.preventDefault();
+
+const confirmation = confirm(`are you sure that you want to delete this file: ${fileName}?`);
+if (!confirmation) {
+return; 
+}
+
+
+const fileItem = event.target.closest('li'); 
+try {
+
+const response = await fetch(`/delete?filename=${encodeURIComponent(fileName)}`, {
+method: 'DELETE'
+});
+
+if (response.ok) {
+
+fileItem.remove();
+
+
+
+
+alert(`file ${fileName} deleted.`);
+} else {
+
+alert('error while deleting.');
+}
+} catch (error) {
+
+console.error('error while deleeting:', error);
+alert('error while deleting file unwak');
+}
+}
+async function editFileContent(fileName, event) {
+event.preventDefault();
+const previewDiv = document.getElementById('preview');
+
+previewDiv.innerHTML = 'Editing...';
+
+const encodedFileName = encodeURIComponent(fileName);
+
+try {
+const response = await fetch(`/${encodedFileName}`);
+if (response.ok) {
+const text = await response.text();
+previewDiv.innerHTML = `
+    <textarea id="file-content">${text}</textarea>
+    <button onclick="saveEditedFile('${encodedFileName}')">Save</button>
+`;
+} else {
+previewDiv.innerHTML = 'Error loading file for editing';
+}
+} catch (error) {
+previewDiv.innerHTML = 'Error loading file for editing';
+}
+}
+
+async function saveEditedFile(fileName) {
+const editedContent = document.getElementById('file-content').value;  // Fixed ID here
+
+try {
+const response = await fetch(`/edit?filename=${encodeURIComponent(fileName)}`, {
+method: 'POST',
+headers: {
+    'Content-Type': 'text/plain',
+},
+body: editedContent,
+});
+
+if (response.ok) {
+alert('File saved successfully!');
+} else {
+alert('Error saving file.');
+}
+} catch (error) {
+console.error('Error saving file:', error);
+alert('Error saving file.');
+}
+}
+
+
+</script>
+</body>
+</html>

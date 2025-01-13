@@ -1,0 +1,283 @@
+<html>
+
+<head>
+    <meta charset="Unicode">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/0.3.0/mammoth.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/highlightjs@9.16.2/styles/gruvbox-dark.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #1d2021;
+            font-family: 'Space Mono', sans-serif;
+            font-size: 16px;
+            color: #d4be98;
+            line-height: 1.6;
+            margin: 0;
+            padding-bottom: 0px;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 0px;
+            display: flex;
+            height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #file-list {
+            width: 25%;
+            max-width: 300px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 20px;
+            border-right: 2px solid #3c3836;
+            position: relative;
+        }
+
+        #file-list ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #file-list li {
+            margin-bottom: 0px;
+        }
+
+        #file-list a {
+            color: #83a598;
+            text-decoration: none;
+            font-weight: bold;
+            display: block;
+            padding: 3px;
+            transition: background-color 0.3s;
+
+            overflow: hidden;
+
+        }
+
+        #file-list a:hover {
+            background-color: #3c3836;
+        }
+
+        #preview {
+            flex-grow: 1;
+            padding-left: 20px;
+            padding-top: 20px;
+            overflow-y: auto;
+        }
+
+        img {
+            max-width: 95%;
+            max-height: 80%;
+            display: block;
+            margin: auto;
+            padding-top: 20px;
+        }
+
+        vid {
+            max-width: 95%;
+            max-height: 80%;
+            display: block;
+            margin: auto;
+            padding-top: 20px;
+        }
+
+        video {
+            max-width: 95%;
+            max-height: 80%;
+            display: block;
+            margin: auto;
+            padding-top: 20px;
+        }
+
+
+        pre {
+            background-color: #1d2021;
+            color: #ebdbb2;
+            padding: 10px;
+            border: 1px solid #504945;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+
+        #search {
+            font-family: 'Space Mono', sans-serif;
+            font-size: 16px;
+            color: #d4be98;
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            margin-top: 10px;
+            border: 1px solid #504945;
+            border-radius: 4px;
+            background-color: #1d2021;
+            color: #d4be98;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        #search:focus {
+            outline: none;
+            border-color: #3c3836;
+            box-shadow: 0 0 5px #3c3836;
+        }
+
+        #drop-area {
+            border: 2px dashed #d3869b;
+            padding: 8px;
+            border-radius: 10px;
+            background-color: #1d2021;
+            color: #d4be98;
+            text-align: center;
+            margin-bottom: 0;
+            margin-top: 10px;
+            position: fixed;
+            left: 88%;
+            bottom: 20px;
+            width: 10%;
+            z-index: 10;
+
+
+        }
+
+        /* Gruvbox dark theme for file content editor */
+        #file-content {
+            background-color: #282828;
+            /* Gruvbox dark background */
+            color: #d4be98;
+            /* Gruvbox light text */
+            border: 1px solid #504945;
+            /* Dark border for contrast */
+            padding: 10px;
+            width: 100%;
+            height: 300px;
+            font-family: 'Space Mono', sans-serif;
+            /* Optional font */
+            font-size: 16px;
+            resize: none;
+            /* Disable resizing */
+            border-radius: 4px;
+            /* Optional rounded corners */
+            outline: none;
+            /* Remove default outline */
+        }
+
+        /* Focused state */
+        #file-content:focus {
+            border-color: #83a598;
+            /* Gruvbox accent color on focus */
+            box-shadow: 0 0 5px #83a598;
+            /* Gruvbox focus shadow */
+        }
+
+        /* Optional button styles */
+        button {
+            background-color: transparent;
+            color: #83a598;
+            /* Gruvbox accent color */
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        /* Button hover effect */
+        button:hover {
+            background-color: #3c3836;
+            /* Darker hover effect */
+            color: #d4be98;
+            /* Light text color on hover */
+        }
+
+
+
+        #drop-area.highlight {
+            background-color: #282828;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+
+        ::-webkit-scrollbar-track {
+            background: #282828;
+
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ebdbb2;
+        }
+
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ebdbb2;
+        }
+
+        .ubuntu-light {
+            font-family: "Ubuntu", serif;
+            font-weight: 300;
+            font-style: normal;
+        }
+
+        .ubuntu-regular {
+            font-family: "Ubuntu", serif;
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        .ubuntu-medium {
+            font-family: "Ubuntu", serif;
+            font-weight: 500;
+            font-style: normal;
+        }
+
+        .ubuntu-bold {
+            font-family: "Ubuntu", serif;
+            font-weight: 700;
+            font-style: normal;
+        }
+
+        .ubuntu-light-italic {
+            font-family: "Ubuntu", serif;
+            font-weight: 300;
+            font-style: italic;
+        }
+
+        .ubuntu-regular-italic {
+            font-family: "Ubuntu", serif;
+            font-weight: 400;
+            font-style: italic;
+        }
+
+        .ubuntu-medium-italic {
+            font-family: "Ubuntu", serif;
+            font-weight: 500;
+            font-style: italic;
+        }
+
+        .ubuntu-bold-italic {
+            font-family: "Ubuntu", serif;
+            font-weight: 700;
+            font-style: italic;
+        }
+
+        /* Custom styling for the textarea to match the Gruvbox Dark theme */
+    </style>
+
+</head>
+
+<body>
+    <div id="file-list">
+
+        <input type="text" id="search" placeholder="Search files..." onkeyup="filterFiles()">
+
+        <ul id="file-items">
