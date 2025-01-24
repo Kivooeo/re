@@ -24,7 +24,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     pretty_env_logger::init();
 
-    let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+    let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
     println!("{:?}", std::env::current_dir());

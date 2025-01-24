@@ -21,7 +21,6 @@ async function loadFileContent(fileName, event) {
     previewDiv.innerHTML = "Loading...";
 
     const encodedFileName = encodeURIComponent(fileName);
-
     try {
         const response = await fetch(`/${encodedFileName}`);
         if (response.ok) {
@@ -53,10 +52,12 @@ async function loadFileContent(fileName, event) {
                 previewDiv.innerHTML = `<embed src="${url}" type="application/pdf" width="100%" height="800px">`;
             } else {
                 const text = await response.text();
-
+                if (text.startsWith("http")) {
+                    previewDiv.innerHTML = `<a href="${text}" target="_blank" rel="noopener noreferrer"><img src="https://cdn.discordapp.com/attachments/1256657186860564573/1332457236425080963/Untitled.png?ex=67955301&is=67940181&hm=7b199b5b3f4f2a4cad16cb17175b8530414c13d8b8d86afe0964d64e84002ec1&" ></a>`;
+                    return;
+                }
                 let fileExt = fileName.split(".").pop().toLowerCase();
                 let languageClass = "";
-
                 switch (fileExt) {
                     case "rs":
                         languageClass = "rust";
