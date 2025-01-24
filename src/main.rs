@@ -1,32 +1,30 @@
 use bytes::Bytes;
 use futures_util::TryStreamExt;
 use http_body_util::{combinators::BoxBody, BodyExt, Full, StreamBody};
-use hyper::body::Frame;
+use hyper::body::{Body, Frame};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, Result, StatusCode};
 use hyper_util::rt::TokioIo;
 use mime_guess::from_path;
 use percent_encoding::percent_decode_str;
-use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::SocketAddr;
 use std::str;
 use tokio::fs::read_dir;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs::File, net::TcpListener};
 use tokio_util::io::ReaderStream;
+
 use whoami;
+
 static NOTFOUND: &[u8] = b"Not Found";
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+
     pretty_env_logger::init();
-    match tokio::fs::create_dir_all(format!("/home/{}/.shared", whoami::username())).await {
-        Ok(_) => {}
-        Err(e) => {
-            dbg!(&e);
-        }
-    }
-    let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
+
+    let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
     println!("{:?}", std::env::current_dir());
@@ -51,7 +49,14 @@ async fn response_examples(
 ) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     dbg!(req.method(), req.uri().path());
     match (req.method(), req.uri().path()) {
-        (&Method::GET, "/") => list_files().await,
+        (&Method::GET, "/") => {
+            match tokio::fs::create_dir_all(format!("C:/Users/{}/.shared", whoami::username())).await {
+                Ok(_) => {}
+                Err(e) => {
+                    dbg!(&e);
+                }
+            };
+            list_files().await},
         (&Method::GET, a) => simple_file_send(a).await,
         (&Method::POST, "/upload") => {
             let query = req.uri().query().unwrap_or("").to_string();
@@ -76,8 +81,35 @@ async fn response_examples(
 
             save_edited_file(&filename, &body_bytes).await
         }
+        (&Method::POST, "/create_file") => {
+            let query = req.uri().query().unwrap_or("").to_string();
+            let filename = query
+                .split("=")
+                .nth(1)
+                .and_then(|x| percent_decode_str(x).decode_utf8().ok())
+                .unwrap_or_else(|| "edited_file.txt".into());
 
-        (&Method::DELETE, _) => {
+            let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
+
+            create_file(&filename, &body_bytes).await
+        }
+        
+        (&Method::POST, "/download") => {
+            let query = req.uri().query().unwrap_or("").to_string();
+            let filename = query
+                .split("=")
+                .nth(1)
+                .and_then(|x| percent_decode_str(x).decode_utf8().ok())
+                .unwrap_or_else(|| "edited_file.txt".into()); // just copied this once again hehehehehehe
+
+            let body_bytes: Vec<u8> = req.into_body().collect().await.unwrap().to_bytes().to_vec();
+
+            save_edited_file(&filename, &body_bytes).await
+        }
+         (&Method::POST, "/delete_all") => {
+            remove_all_files() .await
+        }
+        (&Method::DELETE, "delete") => {
             let query = req.uri().query().unwrap_or("").to_string();
             let filename = query
                 .split("=")
@@ -85,7 +117,7 @@ async fn response_examples(
                 .and_then(|x| percent_decode_str(x).decode_utf8().ok())
                 .unwrap_or_else(|| "uploaded file".into());
             // println!("{body_bytes:?}");
-            tokio::fs::remove_file(format!("/home/{}/.shared/{filename}", whoami::username()))
+            tokio::fs::remove_file(format!("C:/Users/{}/.shared/{filename}", whoami::username()))
                 .await
                 .unwrap();
             Ok(Response::builder()
@@ -97,6 +129,7 @@ async fn response_examples(
                 )
                 .unwrap())
         }
+
         _ => Ok(not_found()),
     }
 }
@@ -114,7 +147,7 @@ async fn simple_file_send(filename: &str) -> Result<Response<BoxBody<Bytes, std:
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("/home/{}/.shared/{}", whoami::username(), decoded_filename);
+    let file_path = format!("C:/Users/{}/.shared/{}", whoami::username(), decoded_filename);
     let file = File::open(&file_path).await;
 
     if file.is_err() {
@@ -149,7 +182,7 @@ async fn save_edited_file(
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("/home/{}/.shared/{}", whoami::username(), decoded_filename);
+    let file_path = format!("C:/Users/{}/.shared/{}", whoami::username(), decoded_filename);
 
     // Create or overwrite the file with the new content
     let mut file = tokio::fs::File::create(file_path).await.unwrap();
@@ -171,7 +204,7 @@ async fn simple_flie_load(
         Ok(decoded) => decoded.to_string(),
         Err(_) => return Ok(not_found()),
     };
-    let file_path = format!("/home/{}/.shared/{}", whoami::username(), decoded_filename);
+    let file_path = format!("C:/Users/{}/.shared/{}", whoami::username(), decoded_filename);
     let file = tokio::fs::File::create_new(file_path).await;
 
     if file.is_err() {
@@ -195,8 +228,45 @@ async fn simple_flie_load(
         .unwrap())
 }
 
+async fn create_file(
+    filename: &str,
+    filecontent: &[u8],
+) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    let decoded_filename = match percent_decode_str(filename).decode_utf8() {
+        Ok(decoded) => decoded.to_string(),
+        Err(_) => return Ok(not_found()),
+    };
+
+    let file_path = format!("C:/Users/{}/.shared/{}", whoami::username(), decoded_filename);
+    let file = tokio::fs::OpenOptions::new().write(true).create_new(true).open(file_path).await;
+    let _ = file.unwrap().write_all(filecontent).await;
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .body(
+            Full::new(Bytes::from("File uploaded successfully"))
+                .map_err(|e| match e {})
+                .boxed(),
+        )
+        .unwrap())
+}
+
+async fn remove_all_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    let x = format!("C:/Users/{}/.shared", whoami::username());
+    dbg!(&x);
+    dbg!( tokio::fs::remove_dir_all(x).await.unwrap());
+    Ok(Response::builder()
+    .status(StatusCode::OK)
+    .body(
+        Full::new(Bytes::from("File uploaded successfully"))
+            .map_err(|e| match e {})
+            .boxed(),
+    )
+    .unwrap())
+}
+
+
 async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
-    let x = format!("/home/{}/.shared", whoami::username());
+    let x = format!("C:/Users/{}/.shared", whoami::username());
     let base_dir = std::path::Path::new(&x);
     dbg!(&base_dir);
     let mut entries = match read_dir(base_dir).await {
@@ -214,6 +284,8 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         }
     };
 
+    // First part of html
+
     let mut html = include_str!("index.html").to_string();
 
     while let Some(entry) = entries.next_entry().await.unwrap_or(None) {
@@ -224,18 +296,26 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         };
 
         html.push_str(&format!(
-            "<li style=\"display: flex; align-items: center;\">
-                <a href=\"#\" onclick=\"loadFileContent('{}', event)\">{}</a>
-                <button onclick=\"editFileContent('{}', event)\" style=\"background: none; border: none; color: blue; cursor: pointer; margin-left: 10px; font-size: 16px; padding: 0;\">
-                    ✏️
-                </button>
-                <button onclick=\"deleteFile('{}', event)\" style=\"background: none; border: none; color: red; cursor: pointer; margin-left: 10px; font-size: 16px; padding: 0;\">
-                    🗑️
-                </button>
+            "<li style=\"display: flex; align-items: center; justify-content: space-between;\">
+                <span>
+                    <a href=\"#\" onclick=\"loadFileContent('{}', event)\">{}</a>
+                </span>
+                <span style=\"position: relative;\">
+                    <button onclick=\"toggleMenu(event, '{}')\" style=\"background: #3c3836; border: 1px solid #504945; color: #d4be98; cursor: pointer; margin-left: 2px; font-size: 16px; padding: 5px; border-radius: 4px;\">
+                        ...
+                    </button>
+                    <div class=\"context-menu\" id=\"menu-{}\" style=\"display: none; position: absolute; right: 0; background: #282828; border: 1px solid #504945; border-radius: 4px; z-index: 1000;\">
+                        <button class=\"aboba\" onclick=\"editFileContent('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #458588; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px;\">Edit</button>
+                        <button class=\"aboba\" onclick=\"deleteFile('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #458588; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px;\">Delete</button>
+                        <button class=\"aboba\" onclick=\"downloadFile('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #458588; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px;\">Download</button>
+                    </div>
+                </span>
             </li>",
-            file_name, file_name, file_name, file_name
+            file_name, file_name, file_name, file_name, file_name, file_name, file_name
         ));
     }
+
+    // Last part
 
     html.push_str(include_str!("scripts.html"));
 
@@ -246,3 +326,5 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         .body(response_body)
         .unwrap())
 }
+
+
