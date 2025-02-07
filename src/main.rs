@@ -337,7 +337,7 @@ fn traverse(path: &std::path::Path, depth: usize) {
     let indent = "  ".repeat(depth);
     
     // Читаем содержимое директории
-    if let Ok(entries) = fs::read_dir(path) {
+    if let Ok(entries) = std::fs::read_dir(path) {
         for entry in entries.flatten() {
             let entry_path = entry.path();
             
