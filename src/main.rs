@@ -21,8 +21,7 @@ static NOTFOUND: &[u8] = b"Not Found";
 const FAVICON: &[u8] = include_bytes!("/app/static/favicon.ico");
 const FONT: &[u8] = include_bytes!("/app/static/monocraft.ttc");
 const MONOFONT: &[u8] = include_bytes!("/app/static/jetbrs.ttf");
-
-
+const PARROT: &[u8] = include_bytes!("/app/static/carrotparrot.jpg");
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -55,6 +54,18 @@ async fn handle_favicon() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     .header("Content-Type", "image/x-icon")
     .body(
         Full::new(Bytes::from(FAVICON))
+            .map_err(|e| match e {})
+            .boxed(),
+    )
+    .unwrap())
+}
+
+async fn parrot() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    Ok(Response::builder()
+    .status(StatusCode::OK)
+    .header("Content-Type", "image")
+    .body(
+        Full::new(Bytes::from(PARROT))
             .map_err(|e| match e {})
             .boxed(),
     )
@@ -96,7 +107,10 @@ async fn response_examples(
         }
         (&Method::GET, "/monofont") => {
             handle_monofont().await
-        }
+        }        
+        (&Method::GET, "/carrot.jpg") => {
+            parrot().await
+        }        
 
         (&Method::GET, "/") => {
             match tokio::fs::create_dir_all(format!("C:/Users/{}/.shared", whoami::username())).await {
