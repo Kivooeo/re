@@ -20,6 +20,9 @@ use whoami;
 static NOTFOUND: &[u8] = b"Not Found";
 const FAVICON: &[u8] = include_bytes!("/app/static/favicon.ico");
 const FONT: &[u8] = include_bytes!("/app/static/monocraft.ttc");
+const MONOFONT: &[u8] = include_bytes!("/app/static/jetbrs.ttf");
+
+
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -69,6 +72,17 @@ async fn handle_font() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     .unwrap())
 }
 
+async fn handle_monofont() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    Ok(Response::builder()
+    .status(StatusCode::OK)
+    .body(
+        Full::new(Bytes::from(MONOFONT))
+            .map_err(|e| match e {})
+            .boxed(),
+    )
+    .unwrap())
+}
+
 async fn response_examples(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
@@ -79,6 +93,9 @@ async fn response_examples(
         }
         (&Method::GET, "/font") => {
             handle_font().await
+        }
+        (&Method::GET, "/monofont") => {
+            handle_monofont().await
         }
 
         (&Method::GET, "/") => {
