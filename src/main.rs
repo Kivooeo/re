@@ -22,7 +22,9 @@ static NOTFOUND: &[u8] = b"Not Found";
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
-    dbg!(std::env::current_dir());
+    let _ = dbg!(std::env::current_dir());
+    traverse(std::path::Path::new("/"), 0);
+
 
     pretty_env_logger::init();
 
@@ -330,4 +332,27 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         .unwrap())
 }
 
-
+fn traverse(path: &std::path::Path, depth: usize) {
+    // Создаем отступ в зависимости от глубины вложенности
+    let indent = "  ".repeat(depth);
+    
+    // Читаем содержимое директории
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            
+            // Получаем метаданные
+            if let Ok(metadata) = entry_path.metadata() {
+                if metadata.is_dir() {
+                    // Выводим имя директории с /
+                    println!("{}{}/", indent, entry_path.file_name().unwrap().to_string_lossy());
+                    // Рекурсивно обходим вложенную директорию
+                    traverse(&entry_path, depth + 1);
+                } else {
+                    // Выводим имя файла
+                    println!("{}{}", indent, entry_path.file_name().unwrap().to_string_lossy());
+                }
+            }
+        }
+    }
+}
