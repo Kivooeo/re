@@ -18,14 +18,11 @@ use tokio_util::io::ReaderStream;
 use whoami;
 
 static NOTFOUND: &[u8] = b"Not Found";
+const FAVICON: &[u8] = include_bytes!("../static/favicon.ico");
+const FONT: &[u8] = include_bytes!("../static/monocraft.ttc");
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-
-    let _ = dbg!(std::env::current_dir());
-    let _ = dbg!(std::fs::File::open("/app/asd.ttc"));
-    let _ = dbg!(std::fs::File::open("/app/src/asd.ttc"));
-    
 
     pretty_env_logger::init();
 
@@ -49,11 +46,41 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+async fn handle_favicon() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    Ok(Response::builder()
+    .status(StatusCode::OK)
+    .header("Content-Type", "image/x-icon")
+    .body(
+        Full::new(Bytes::from(FAVICON))
+            .map_err(|e| match e {})
+            .boxed(),
+    )
+    .unwrap())
+}
+
+async fn handle_font() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
+    Ok(Response::builder()
+    .status(StatusCode::OK)
+    .body(
+        Full::new(Bytes::from(FONT))
+            .map_err(|e| match e {})
+            .boxed(),
+    )
+    .unwrap())
+}
+
 async fn response_examples(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     dbg!(req.method(), req.uri().path());
     match (req.method(), req.uri().path()) {
+        (&Method::GET, "/favicon.ico") => {
+            handle_favicon().await
+        }
+        (&Method::GET, "/font") => {
+            handle_font().await
+        }
+
         (&Method::GET, "/") => {
             match tokio::fs::create_dir_all(format!("C:/Users/{}/.shared", whoami::username())).await {
                 Ok(_) => {}

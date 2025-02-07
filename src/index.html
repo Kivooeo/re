@@ -2,15 +2,23 @@
 
 <head>
     <meta charset="Unicode">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <title>hell</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/0.3.0/mammoth.browser.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/highlightjs@9.16.2/styles/gruvbox-dark.css">
+    <!-- <link rel="stylesheet" href="https://unpkg.com/highlightjs@9.16.2/styles/gruvbox-dark.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Reddit+Mono:wght@200..900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Reddit+Mono:wght@200..900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet"> -->
     <style>
+
+        @font-face {
+            font-family: 'MonoCraft';
+            src: url('/font') format('truetype');
+        }
+
         body {
             background-color: #1d2021;
             font-size: 19px;
@@ -28,7 +36,7 @@
 
         #file-list {
             width: 25%;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             max-width: 300px;
             overflow-y: auto;
             overflow-x: hidden;
@@ -52,7 +60,7 @@
             color: #83a598;
             text-decoration: none;
             font-weight: bold;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             display: block;
             padding: 3px;
             transition: background-color 0.3s;
@@ -66,7 +74,7 @@
         #preview {
             flex-grow: 1;
             padding-left: 20px;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             padding-top: 20px;
             overflow-y: auto;
         }
@@ -107,7 +115,7 @@
         #search {
             font-size: 19px;
             color: #d4be98;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -130,7 +138,7 @@
         #drop-area {
             border: 2px dashed #d3869b;
             padding: 8px;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             border-radius: 10px;
             background-color: #1d2021;
             color: #d4be98;
@@ -156,7 +164,7 @@
             background-color: #282828;
             color: #d4be98;
             border: 1px solid #504945;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             padding: 10px;
             width: 100%;
             height: 50px;
@@ -173,7 +181,7 @@
             padding: 10px;
             width: 100%;
             height: 300px;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             font-size: 19px;
             resize: none;
             border-radius: 4px;
@@ -187,7 +195,7 @@
             border: 1px solid #504945;
             padding: 10px;
             width: 100%;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             height: 300px;
             font-size: 19px;
             resize: none;
@@ -210,7 +218,7 @@
             color: #282828;
             padding: 10px;
             border-radius: 4px;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             font-size: 19px;
             margin-top: 10px;
             cursor: pointer;
@@ -227,7 +235,7 @@
             padding: 10px;
             border-radius: 4px;
             font-size: 19px;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             margin-top: 10px;
             cursor: pointer;
             border: none;
@@ -243,7 +251,7 @@
             padding: 10px;
             border-radius: 4px;
             font-size: 19px;
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             margin-top: 10px;
             cursor: pointer;
             border: none;
@@ -280,7 +288,7 @@
         }
 
         .aboba {
-            font-family: "Reddit Mono";
+            font-family: "MonoCraft";
             font-size: 14px;
         }
     </style>
