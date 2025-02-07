@@ -19,3 +19,19 @@ and then go to the dictionary you've just cloned \
 `cd re`\
 and then run it \
 `cargo run`\
+
+
+# Changelog
+
+## [v665.9] - today
+### Added
+- Drag-and-drop support for files anywhere in the interface
+- Markdown file support and preview functionality
+
+### Changed
+- Updated color scheme for file creation/deletion buttons
+
+### Fixed
+- Single file deletion now works properly
+- Improved file management reliability
+
