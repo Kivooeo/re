@@ -11,9 +11,9 @@
     </p>
 </div>
 <script>
+const skipFirstLine = (str) => str.split('\n').slice(1).join('\n');
 
 // Function for loading content on the site
-
 async function loadFileContent(fileName, event) {
     event.preventDefault();
     const previewDiv = document.getElementById("preview");
@@ -54,6 +54,10 @@ async function loadFileContent(fileName, event) {
                 const text = await response.text();
                 if (text.startsWith("http")) {
                     previewDiv.innerHTML = `<a href="${text}" target="_blank" rel="noopener noreferrer"><img src="https://cdn.discordapp.com/attachments/1256657186860564573/1332457236425080963/Untitled.png?ex=67955301&is=67940181&hm=7b199b5b3f4f2a4cad16cb17175b8530414c13d8b8d86afe0964d64e84002ec1&" ></a>`;
+                    return;
+                }
+                if (text.startsWith("md")) {
+                    previewDiv.innerHTML = marked.parse(skipFirstLine(text));
                     return;
                 }
                 let fileExt = fileName.split(".").pop().toLowerCase();
@@ -129,25 +133,41 @@ function filterFiles() {
     });
 }
 const dropArea = document.getElementById("drop-area");
+let dragCounter = 0; // Helps track nested drag events
 
-dropArea.addEventListener("dragover", (event) => {
+document.addEventListener("dragenter", (event) => {
+    if (event.dataTransfer.items && event.dataTransfer.items.length > 0) {
+        dragCounter++;
+        dropArea.classList.add("active"); // Make drop area visible
+    }
+});
+
+document.addEventListener("dragover", (event) => {
     event.preventDefault();
     dropArea.classList.add("highlight");
 });
 
-dropArea.addEventListener("dragleave", () => {
+document.addEventListener("dragleave", () => {
+    dragCounter--;
+    if (dragCounter === 0) {
+        dropArea.classList.remove("active"); // Hide if no more drags
+    }
     dropArea.classList.remove("highlight");
 });
 
-dropArea.addEventListener("drop", (event) => {
+document.addEventListener("drop", (event) => {
     event.preventDefault();
     dropArea.classList.remove("highlight");
+    dropArea.classList.remove("active");
+    dragCounter = 0; // Reset counter
+
     const files = event.dataTransfer.files;
-    handleFiles(files);
+    if (files.length > 0) {
+        handleFiles(files);
+    }
 });
 
 // This function I guess for downloaing files through the site's dran'n drop
-
 async function handleFiles(files) {
     for (const file of files) {
         if (file.name.length > 24) {
@@ -180,7 +200,6 @@ async function handleFiles(files) {
 }
 
 // For updating website after deleting or uploading files
-
 async function updateFileList() {
     try {
         const response = await fetch("/");
@@ -218,16 +237,12 @@ async function updateFileList() {
     }
 }
 
-
 async function deleteFile(fileName, event) {
     const confirmation1 = prompt("Enter password");
     if (confirmation1 !== "k") {
         return;
     }
     event.preventDefault();
-
-
-
 
     const confirmation = confirm(
         `are you sure that you want to delete this file: ${fileName}?`,
@@ -281,7 +296,6 @@ async function editFileContent(fileName, event) {
 }
 
 // Edit file function
-
 async function saveEditedFile(fileName) {
     const editedContent = document.getElementById("file-content").value;
 
@@ -316,7 +330,6 @@ function createNewFileForm() {
     <button id="coolbtn" onclick="saveNewFile()">Save</button>
 `;
 }
-
 
 // create new file 
 async function saveNewFile() {
@@ -415,7 +428,6 @@ function toggleMenu(event, fileName) {
         }
     });
 }
-
 </script>
 </body>
 

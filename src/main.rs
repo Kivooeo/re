@@ -109,7 +109,7 @@ async fn response_examples(
          (&Method::POST, "/delete_all") => {
             remove_all_files() .await
         }
-        (&Method::DELETE, "delete") => {
+        (&Method::DELETE, "/delete") => {
             let query = req.uri().query().unwrap_or("").to_string();
             let filename = query
                 .split("=")
@@ -117,6 +117,7 @@ async fn response_examples(
                 .and_then(|x| percent_decode_str(x).decode_utf8().ok())
                 .unwrap_or_else(|| "uploaded file".into());
             // println!("{body_bytes:?}");
+            dbg!(&filename);
             tokio::fs::remove_file(format!("C:/Users/{}/.shared/{filename}", whoami::username()))
                 .await
                 .unwrap();
@@ -304,10 +305,10 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
                     <button onclick=\"toggleMenu(event, '{}')\" style=\"background: #3c3836; border: 1px solid #504945; color: #d4be98; cursor: pointer; margin-left: 2px; font-size: 16px; padding: 5px; border-radius: 4px;\">
                         ...
                     </button>
-                    <div class=\"context-menu\" id=\"menu-{}\" style=\"display: none; position: absolute; right: 0; background: #282828; border: 1px solid #504945; border-radius: 4px; z-index: 1000;\">
-                        <button class=\"aboba\" onclick=\"editFileContent('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #458588; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px;\">Edit</button>
-                        <button class=\"aboba\" onclick=\"deleteFile('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #458588; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px;\">Delete</button>
-                        <button class=\"aboba\" onclick=\"downloadFile('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #458588; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px;\">Download</button>
+                    <div class=\"context-menu\" id=\"menu-{}\" style=\"display: none; position: absolute; right: 0; background: #fbf1c7; border: 1px solid #504945; border-radius: 4px; z-index: 1000;\">
+                        <button class=\"aboba\" onclick=\"editFileContent('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #b8bb26; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px;\">Edit</button>
+                        <button class=\"aboba\" onclick=\"deleteFile('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #fb4943; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px;\">Delete</button>
+                        <button class=\"aboba\" onclick=\"downloadFile('{}', event)\" style=\"background: #3c3836; border: 1px solid #504945; color: #689d6a; cursor: pointer; display: block; width: 100%; text-align: left; padding: 5px 10px; font-size: 14px;\">Download</button>
                     </div>
                 </span>
             </li>",
