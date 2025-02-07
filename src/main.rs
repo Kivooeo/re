@@ -23,7 +23,6 @@ static NOTFOUND: &[u8] = b"Not Found";
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let _ = dbg!(std::env::current_dir());
-    traverse(std::path::Path::new("/app"), 0);
 
 
     pretty_env_logger::init();
