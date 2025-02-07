@@ -23,7 +23,9 @@ static NOTFOUND: &[u8] = b"Not Found";
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let _ = dbg!(std::env::current_dir());
-
+    let _ = dbg!(std::fs::File::open("/app/asd.ttc"));
+    let _ = dbg!(std::fs::File::open("/app/src/asd.ttc"));
+    
 
     pretty_env_logger::init();
 
