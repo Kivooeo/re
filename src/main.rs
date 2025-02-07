@@ -18,8 +18,8 @@ use tokio_util::io::ReaderStream;
 use whoami;
 
 static NOTFOUND: &[u8] = b"Not Found";
-const FAVICON: &[u8] = include_bytes!("/static/favicon.ico");
-const FONT: &[u8] = include_bytes!("/static/monocraft.ttc");
+const FAVICON: &[u8] = include_bytes!("/app/static/favicon.ico");
+const FONT: &[u8] = include_bytes!("/app/static/monocraft.ttc");
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
