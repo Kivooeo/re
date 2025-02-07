@@ -22,6 +22,8 @@ static NOTFOUND: &[u8] = b"Not Found";
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
+    dbg!(std::env::current_dir());
+
     pretty_env_logger::init();
 
     let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
