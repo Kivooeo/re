@@ -25,7 +25,6 @@ const PARROT: &[u8] = include_bytes!("/app/static/carrotparrot.jpg");
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-
     pretty_env_logger::init();
 
     let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
@@ -50,48 +49,44 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
 async fn handle_favicon() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     Ok(Response::builder()
-    .status(StatusCode::OK)
-    .header("Content-Type", "image/x-icon")
-    .body(
-        Full::new(Bytes::from(FAVICON))
-            .map_err(|e| match e {})
-            .boxed(),
-    )
-    .unwrap())
+        .status(StatusCode::OK)
+        .header("Content-Type", "image/x-icon")
+        .body(
+            Full::new(Bytes::from(FAVICON))
+                .map_err(|e| match e {})
+                .boxed(),
+        )
+        .unwrap())
 }
 
 async fn parrot() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     Ok(Response::builder()
-    .status(StatusCode::OK)
-    .header("Content-Type", "image")
-    .body(
-        Full::new(Bytes::from(PARROT))
-            .map_err(|e| match e {})
-            .boxed(),
-    )
-    .unwrap())
+        .status(StatusCode::OK)
+        .header("Content-Type", "image")
+        .body(
+            Full::new(Bytes::from(PARROT))
+                .map_err(|e| match e {})
+                .boxed(),
+        )
+        .unwrap())
 }
 
 async fn handle_font() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     Ok(Response::builder()
-    .status(StatusCode::OK)
-    .body(
-        Full::new(Bytes::from(FONT))
-            .map_err(|e| match e {})
-            .boxed(),
-    )
-    .unwrap())
+        .status(StatusCode::OK)
+        .body(Full::new(Bytes::from(FONT)).map_err(|e| match e {}).boxed())
+        .unwrap())
 }
 
 async fn handle_monofont() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     Ok(Response::builder()
-    .status(StatusCode::OK)
-    .body(
-        Full::new(Bytes::from(MONOFONT))
-            .map_err(|e| match e {})
-            .boxed(),
-    )
-    .unwrap())
+        .status(StatusCode::OK)
+        .body(
+            Full::new(Bytes::from(MONOFONT))
+                .map_err(|e| match e {})
+                .boxed(),
+        )
+        .unwrap())
 }
 
 async fn response_examples(
@@ -99,27 +94,22 @@ async fn response_examples(
 ) -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     dbg!(req.method(), req.uri().path());
     match (req.method(), req.uri().path()) {
-        (&Method::GET, "/favicon.ico") => {
-            handle_favicon().await
-        }
-        (&Method::GET, "/font") => {
-            handle_font().await
-        }
-        (&Method::GET, "/monofont") => {
-            handle_monofont().await
-        }        
-        (&Method::GET, "/carrot.jpg") => {
-            parrot().await
-        }        
+        (&Method::GET, "/favicon.ico") => handle_favicon().await,
+        (&Method::GET, "/font") => handle_font().await,
+        (&Method::GET, "/monofont") => handle_monofont().await,
+        (&Method::GET, "/carrot.jpg") => parrot().await,
 
         (&Method::GET, "/") => {
-            match tokio::fs::create_dir_all(format!("C:/Users/{}/.shared", whoami::username())).await {
+            match tokio::fs::create_dir_all(format!("C:/Users/{}/.shared", whoami::username()))
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => {
                     dbg!(&e);
                 }
             };
-            list_files().await},
+            list_files().await
+        }
         (&Method::GET, a) => simple_file_send(a).await,
         (&Method::POST, "/upload") => {
             let query = req.uri().query().unwrap_or("").to_string();
@@ -156,7 +146,7 @@ async fn response_examples(
 
             create_file(&filename, &body_bytes).await
         }
-        
+
         (&Method::POST, "/download") => {
             let query = req.uri().query().unwrap_or("").to_string();
             let filename = query
@@ -169,9 +159,7 @@ async fn response_examples(
 
             save_edited_file(&filename, &body_bytes).await
         }
-         (&Method::POST, "/delete_all") => {
-            remove_all_files() .await
-        }
+        (&Method::POST, "/delete_all") => remove_all_files().await,
         (&Method::DELETE, "/delete") => {
             let query = req.uri().query().unwrap_or("").to_string();
             let filename = query
@@ -181,9 +169,12 @@ async fn response_examples(
                 .unwrap_or_else(|| "uploaded file".into());
             // println!("{body_bytes:?}");
             dbg!(&filename);
-            tokio::fs::remove_file(format!("C:/Users/{}/.shared/{filename}", whoami::username()))
-                .await
-                .unwrap();
+            tokio::fs::remove_file(format!(
+                "C:/Users/{}/.shared/{filename}",
+                whoami::username()
+            ))
+            .await
+            .unwrap();
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .body(
@@ -211,7 +202,11 @@ async fn simple_file_send(filename: &str) -> Result<Response<BoxBody<Bytes, std:
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("C:/Users/{}/.shared/{}", whoami::username(), decoded_filename);
+    let file_path = format!(
+        "C:/Users/{}/.shared/{}",
+        whoami::username(),
+        decoded_filename
+    );
     let file = File::open(&file_path).await;
 
     if file.is_err() {
@@ -246,7 +241,11 @@ async fn save_edited_file(
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("C:/Users/{}/.shared/{}", whoami::username(), decoded_filename);
+    let file_path = format!(
+        "C:/Users/{}/.shared/{}",
+        whoami::username(),
+        decoded_filename
+    );
 
     // Create or overwrite the file with the new content
     let mut file = tokio::fs::File::create(file_path).await.unwrap();
@@ -268,7 +267,11 @@ async fn simple_flie_load(
         Ok(decoded) => decoded.to_string(),
         Err(_) => return Ok(not_found()),
     };
-    let file_path = format!("C:/Users/{}/.shared/{}", whoami::username(), decoded_filename);
+    let file_path = format!(
+        "C:/Users/{}/.shared/{}",
+        whoami::username(),
+        decoded_filename
+    );
     let file = tokio::fs::File::create_new(file_path).await;
 
     if file.is_err() {
@@ -301,8 +304,16 @@ async fn create_file(
         Err(_) => return Ok(not_found()),
     };
 
-    let file_path = format!("C:/Users/{}/.shared/{}", whoami::username(), decoded_filename);
-    let file = tokio::fs::OpenOptions::new().write(true).create_new(true).open(file_path).await;
+    let file_path = format!(
+        "C:/Users/{}/.shared/{}",
+        whoami::username(),
+        decoded_filename
+    );
+    let file = tokio::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(file_path)
+        .await;
     let _ = file.unwrap().write_all(filecontent).await;
     Ok(Response::builder()
         .status(StatusCode::OK)
@@ -317,17 +328,16 @@ async fn create_file(
 async fn remove_all_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     let x = format!("C:/Users/{}/.shared", whoami::username());
     dbg!(&x);
-    dbg!( tokio::fs::remove_dir_all(x).await.unwrap());
+    dbg!(tokio::fs::remove_dir_all(x).await.unwrap());
     Ok(Response::builder()
-    .status(StatusCode::OK)
-    .body(
-        Full::new(Bytes::from("File uploaded successfully"))
-            .map_err(|e| match e {})
-            .boxed(),
-    )
-    .unwrap())
+        .status(StatusCode::OK)
+        .body(
+            Full::new(Bytes::from("File uploaded successfully"))
+                .map_err(|e| match e {})
+                .boxed(),
+        )
+        .unwrap())
 }
-
 
 async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     let x = format!("C:/Users/{}/.shared", whoami::username());
@@ -389,29 +399,4 @@ async fn list_files() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         .header("Content-Type", "text/html")
         .body(response_body)
         .unwrap())
-}
-
-fn traverse(path: &std::path::Path, depth: usize) {
-    // Создаем отступ в зависимости от глубины вложенности
-    let indent = "  ".repeat(depth);
-    
-    // Читаем содержимое директории
-    if let Ok(entries) = std::fs::read_dir(path) {
-        for entry in entries.flatten() {
-            let entry_path = entry.path();
-            
-            // Получаем метаданные
-            if let Ok(metadata) = entry_path.metadata() {
-                if metadata.is_dir() {
-                    // Выводим имя директории с /
-                    println!("{}{}/", indent, entry_path.file_name().unwrap().to_string_lossy());
-                    // Рекурсивно обходим вложенную директорию
-                    traverse(&entry_path, depth + 1);
-                } else {
-                    // Выводим имя файла
-                    println!("{}{}", indent, entry_path.file_name().unwrap().to_string_lossy());
-                }
-            }
-        }
-    }
 }
