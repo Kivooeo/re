@@ -173,7 +173,10 @@ async function handleFiles(files) {
         if (file.name.length > 24) {
             alert("oohhh~~ its so much for me~ `moan`");
             continue;
-        }
+        }    const confirmation1 = prompt("Enter password");
+    if (confirmation1 !== "k") {
+        return;
+    }
         try {
             const fileArrayBuffer = await file.arrayBuffer();
             const fileBytes = new Uint8Array(fileArrayBuffer);
@@ -340,7 +343,10 @@ async function saveNewFile() {
         alert("Please provide both a file name and content.");
         return;
     }
-
+    const confirmation1 = prompt("Enter password");
+    if (confirmation1 !== "k") {
+        return;
+    }
     if (fileName.length > 24) {
         alert("too big daddy~");
         return;
