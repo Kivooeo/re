@@ -18,10 +18,10 @@ use tokio_util::io::ReaderStream;
 use whoami;
 
 const NOTFOUND: &[u8] = b"Not Found";
-const FAVICON: &[u8] = include_bytes!("/app/static/favicon.ico");
+const FAVICON: &[u8] = include_bytes!("/app/static/favicon.gif");
 const FONT: &[u8] = include_bytes!("/app/static/monocraft.ttc");
 const MONOFONT: &[u8] = include_bytes!("/app/static/jetbrs.ttf");
-const PARROT: &[u8] = include_bytes!("/app/static/carrotparrot.jpg");
+const PARROT: &[u8] = include_bytes!("/app/static/lesson.gif");
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -50,7 +50,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 async fn handle_favicon() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     Ok(Response::builder()
         .status(StatusCode::OK)
-        .header("Content-Type", "image/x-icon")
+        .header("Content-Type", "image/gif")
         .body(
             Full::new(Bytes::from(FAVICON))
                 .map_err(|e| match e {})
@@ -62,7 +62,7 @@ async fn handle_favicon() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
 async fn parrot() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     Ok(Response::builder()
         .status(StatusCode::OK)
-        .header("Content-Type", "image")
+        .header("Content-Type", "gif")
         .body(
             Full::new(Bytes::from(PARROT))
                 .map_err(|e| match e {})
