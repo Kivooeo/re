@@ -17,7 +17,7 @@ use tokio_util::io::ReaderStream;
 
 use whoami;
 
-static NOTFOUND: &[u8] = b"Not Found";
+const NOTFOUND: &[u8] = b"Not Found";
 const FAVICON: &[u8] = include_bytes!("/app/static/favicon.ico");
 const FONT: &[u8] = include_bytes!("/app/static/monocraft.ttc");
 const MONOFONT: &[u8] = include_bytes!("/app/static/jetbrs.ttf");
