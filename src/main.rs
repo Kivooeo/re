@@ -26,7 +26,7 @@ const NOTFOUND: &[u8] = b"Not Found";
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
-    dbg!(std::path::Path::new("/app/static/").exist());
+    dbg!(std::path::Path::new("/app/static/").exists());
 
     let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
     let listener = TcpListener::bind(addr).await?;
