@@ -18,14 +18,15 @@ use tokio_util::io::ReaderStream;
 use whoami;
 
 const NOTFOUND: &[u8] = b"Not Found";
-const FAVICON: &[u8] = include_bytes!("/app/static/favicon.gif");
-const FONT: &[u8] = include_bytes!("/app/static/monocraft.ttc");
-const MONOFONT: &[u8] = include_bytes!("/app/static/jetbrs.ttf");
-const PARROT: &[u8] = include_bytes!("/app/static/lesson.gif");
+// const FAVICON: &[u8] = include_bytes!("/app/static/favicon.gif");
+// const FONT: &[u8] = include_bytes!("/app/static/monocraft.ttc");
+// const MONOFONT: &[u8] = include_bytes!("/app/static/jetbrs.ttf");
+// const PARROT: &[u8] = include_bytes!("/app/static/lesson.gif");
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
+    dbg!(std::path::new("/app/static/");
 
     let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
     let listener = TcpListener::bind(addr).await?;
