@@ -53,7 +53,7 @@ async fn handle_favicon() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         .status(StatusCode::OK)
         .header("Content-Type", "image/gif")
         .body(
-            Full::new(Bytes::from(FAVICON))
+            Full::new(Bytes::from("asd"))
                 .map_err(|e| match e {})
                 .boxed(),
         )
@@ -65,7 +65,7 @@ async fn parrot() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
         .status(StatusCode::OK)
         .header("Content-Type", "gif")
         .body(
-            Full::new(Bytes::from(PARROT))
+            Full::new(Bytes::from("asd"))
                 .map_err(|e| match e {})
                 .boxed(),
         )
@@ -75,7 +75,7 @@ async fn parrot() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
 async fn handle_font() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     Ok(Response::builder()
         .status(StatusCode::OK)
-        .body(Full::new(Bytes::from(FONT)).map_err(|e| match e {}).boxed())
+        .body(Full::new(Bytes::from("asd")).map_err(|e| match e {}).boxed())
         .unwrap())
 }
 
@@ -83,7 +83,7 @@ async fn handle_monofont() -> Result<Response<BoxBody<Bytes, std::io::Error>>> {
     Ok(Response::builder()
         .status(StatusCode::OK)
         .body(
-            Full::new(Bytes::from(MONOFONT))
+            Full::new(Bytes::from("asd"))
                 .map_err(|e| match e {})
                 .boxed(),
         )
